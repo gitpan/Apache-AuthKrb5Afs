@@ -1,0 +1,70 @@
+#!/bin/sh
+
+set -a
+
+HTTPD_PORT=${HTTPD_PORT:-8000}
+
+# where to find apache and its modules it's in ../usr if you used ../src/build-apache-moddav
+HTTPD_DIR=${HTTPD_DIR:=$PWD/../usr/apache_1.3.29}
+HTTPD_LIBEXEC=$HTTPD_DIR/libexec
+HTTPD=$HTTPD_DIR/bin/httpd
+
+PERL5LIB=$PWD/../blib/lib:$PERL5LIB
+
+httpd_pid() {
+    cat log/httpd.pid 2>/dev/null
+}
+
+subst() {
+    find . -name '*.in' | while read i; do 
+      perl -pne 's/%(\w+)%/$ENV{$1}/ge' $i > ${i%%.in}; 
+    done
+}
+
+case $1 in 
+start)
+	pid=$(httpd_pid)
+	if [ "$pid" ]; then
+	   echo "Apache is already running at $pid.  Try $0 restart instead" >&2
+	   exit 1
+	fi
+
+	subst
+	[ -e libexec ] || ln -sf $HTTPD_LIBEXEC libexec
+	if ! [ -d libexec/.. ]; then
+	    echo "You must link your apache's libexec (modules) directory here.  $HTTPD_LIBEXEC doesn't exist" >&2
+	    exit 1
+	fi
+	mkdir -p log lock/mod_dav www
+
+	$HTTPD -f $PWD/httpd.conf
+
+	sleep 1
+	pid=$(httpd_pid)
+	echo "Apache started at $pid"
+	;;
+
+stop)
+	pid=$(httpd_pid)
+	if [ "$pid" -a -d "/proc/$pid" ]; then
+	   while [ -d "/proc/$pid" ]; do
+	       echo "killing apache at $pid..."
+	       kill $pid
+	       sleep 1
+	   done
+        fi
+	rm -f log/httpd.pid
+	;;
+restart)
+	$0 stop
+	$0 start
+	;;
+*)
+        echo "usage $0 {start|stop|restart}" >&2
+        exit 1
+esac
+
+
+
+	
+

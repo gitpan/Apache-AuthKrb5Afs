@@ -1,0 +1,183 @@
+NAME
+    Apache::AuthKrb5Afs - integrated OpenAFS/Krb5 login for Apache
+
+DESCRIPTION
+    This mod_perl module lets Apache acquire OpenAFS and Krb5 tokens for
+    user requests. So, users can access files and scripts on AFS with
+    Apache, using their AFS password. Users can also use DAV to uplaod and
+    download files to AFS as an alternative to FTP or a local AFS client.
+
+    This has several benefits:
+
+    *   Users can use AFS access control lists instead of .htaccess files to
+        restrict access to files and scripts.
+
+    *   Users can use DAV as a secure alternative to FTP to access files in
+        AFS. DAV works when a local AFS client is not available.
+
+    *   Apache does not need to run as root to assume a user's AFS rights.
+        No more suEXEC.
+
+    *   Scripts run with the user's Krb5 and AFS identity. Since secure
+        login is built into each request, scripts do not have to implement
+        their own login/access control mechanism. Scripts that connect to
+        Kerberos-awar applications (eg databases like PostgreSQL) can use
+        the web request's Krb5 ticket for access.
+
+PREREQUISITES
+    You must have a working OpenAFS + Krb5 installation.
+
+    You also need Apache with mod_perl and mod_dav. The included Makefile.PL
+    can build Apache for you.
+
+    AFS user ids must be in the Unix user database. Getpwuid(afs_uid) must
+    find the UNIX user name and home directory for the right Unix user.
+
+    This has been developed and tested using Debian GNU/Linux (woody),
+    openafs-1.2.8, krb5-1.2.4, apache-1.3.29, mod_perl-1.29,
+    mod_dav-1.0.3-1.3.6, and mod_ssl-2.8.16-1.3.29. Apache-2.0 does not work
+    at the time of this writing, due to limitations in mod_perl-1.99.
+
+HOW IT WORKS
+    A login script collects a password and user name. The password is passed
+    to kinit to get a Krb5 ticket. The Krb5 ticket is saved in a browser
+    cookie. Subsequent requests use the cookie to locate the Krb5 ticket,
+    renews the ticket, and gets AFS tokens from it using aklog.
+
+    Here it is step by step:
+
+    *   A client accesses an AFS file with Apache.
+
+    *   If the file is protected, Apache throws a 403 error.
+
+    *   Apache redirects 403 errors to a login page.
+
+    *   The login page collects the user's name and password and sends it
+        through Apache::AuthKrb5Afs->login().
+
+    *   Apache::AuthKrb5Afs uses Auth::Krb5AFS to acquire Krb5 and AFS
+        tokens with the user's password.
+
+    *   Apache::AuthKrb5Afs saves the Krb5 ticket next to a cookie in a
+        local cache and returns the cookie's session key to the client.
+
+    *   Note: DAV requests from Windows Explorer ignore cookies and use HTTP
+        Basic authentication exclusively. Apache::AuthKrb5Afs will make a
+        pseudo session key from the client's "Authentication" header and
+        reuse that to find a cached Krb5 ticket.
+
+    *   The login page redirects the user to the original URL that threw the
+        403 error.
+
+    *   The next client request sends the cookie. Apache uses the cookie to
+        find the cached Krb5 ticket, renews the ticket (with kinit), and
+        acquires AFS permissions (with aklog). Apache sets the following
+        environment variables to indicate sucessful login: REMOTE_USER,
+        USER, HOME, SHELL, SESKEY, KRB5CCNAME, AUTH_COOKIE, and
+        AUTH_COOKIE_PATH
+
+    *   If the URL was a script, it will execute with the user's AFS
+        permissions. The script can check the REMOTE_USER environment
+        variable to confirm that the user logged in. The only way
+        REMOTE_USER will be non-empty is if the user is really authenticated
+        with kerberos.
+
+        If a script requires authentication, it can throw a 403 error to
+        invoke the Apache::AuthKrb5Afs login mechanism.
+
+    *   Apache's Krb5 ticket can be used with other krb5-aware programs. For
+        example, this will allow an Apache request to access a PostgreSQL
+        database with a user's credentials without passing the user's
+        password again.
+
+INSTALLATION
+    Basically,
+
+        export HTTPD_DIR=/path/to/apache   # (optional)
+        perl Makefile.PL
+        make
+        make test
+        make install
+
+    You need a working Apache with mod_perl and mod_dav. If you don't have
+    Apache already, the script in "src/build-apache-moddav" will download
+    and build all these for you and install them into $PWD/usr:
+
+        apache_1.3.29
+        mod_perl-1.29
+        mod_ssl-2.8.16-1.3.29
+        mod_dav-1.0.3-1.3.6   (with patch for OpenAFS)
+
+    Mod_dav needed a small patch to handle OpenAFS directories.
+
+    After the test works, you can update your local Apache configuration.
+
+    *   Add "test/httpd-afs.conf" to your local "httpd.conf"
+
+    *   Install the test/www/login.pl script in your web root and customize
+        it for your site.
+
+TESTING
+    The "test" directory has a minimal httpd.conf that gets Apache listening
+    with mod_dav under port 8000.
+
+        cd test
+        edit httpd-test.init
+        ./httpd-test.init start
+
+    A shorthand way to run kttpd-test.init and tail the log file is:
+
+        make test INTERACTIVE=1
+
+    Now browse http://127.0.0.1:8000/afs. If your browse a read-protected
+    AFS directory, you will be redirected to the login page. If you browse
+    an AFS directory with DAV you will get a password prompt.
+
+BUGS
+    *   As with all authentication schemes, be careful not to send the
+        cookies unencrypted, or allow unencrypted basic authentication. All
+        authenticated traffic should be over HTTPS.
+
+    *   Make sure the Krb5 ticket cache (/tmp/AuthKrb5Afs) is only readable
+        by the Apache process.
+
+    *   Krb5 tickets are cached in a local temporary directory. If you use a
+        cluster of web servers, you should store the krb5 tickets in a
+        shared AFS directory.
+
+    *   Browsing DAV directories under Windows Explorer is slow. It looks
+        like explorer sends one PROPFIND request per directory entry, and
+        the overhead of each request adds up.
+
+SEE ALSO
+     OpenAFS  - http://www.openafs.org
+     Apache   - http://www.apache.org
+     mod_dav  - http://www.webdav.org/mod_dav/
+     mod_perl - http://perl.apache.org
+     bkbox    - http://www.bkbox.com
+
+    kinit(1), aklog(1), Apache(3)
+
+AUTHOR
+     Noel Burton-Krahn <noel@bkbox.com>
+     www.burton-krahn.com
+     Dec 15, 2003
+     Copyright (C) 2003 Noel Burton-Krahn <noel@bkbox.com>
+
+LICENSE
+    Copyright (C) 2003 Noel Burton-Krahn <noel@bkbox.com>
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation; either version 2 of the License, or (at your
+    option) any later version.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+    Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+

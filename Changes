@@ -1,0 +1,6 @@
+Revision history for Perl extension Apache::AuthKrb5Afs.
+
+0.01  Tue Dec 16 23:44:45 2003
+	- original version; created by h2xs 1.21 with options
+		-n Apache::AuthKrb5Afs
+

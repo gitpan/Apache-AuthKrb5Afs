@@ -1,0 +1,88 @@
+#! /bin/sh
+# apache-openafs-moddav/src/build
+# Noel Burton-krahn <noel@bkbox.com>
+# July 1, 2003
+#
+# download and build apache, mod_ssl, mod_perl, and mod_dav.
+
+set -eux
+
+set -a 
+# installation root.  Could be ~/usr, ../usr, or /usr/local is you're root.
+INSTALL_ROOT=${INSTALL_ROOT:-$(pwd)/../usr}
+
+APACHE=apache_1.3.29
+MOD_PERL=mod_perl-1.29
+MOD_DAV=mod_dav-1.0.3-1.3.6
+MOD_SSL=mod_ssl-2.8.16-1.3.29
+
+mkdir -p build
+cd build
+
+wget -nc http://apache.mirror.mcgill.ca/httpd/$APACHE.tar.gz
+wget -nc http://perl.apache.org/dist/$MOD_PERL.tar.gz
+wget -nc http://www.webdav.org/mod_dav/$MOD_DAV.tar.gz
+wget -nc http://www.modssl.org/source/$MOD_SSL.tar.gz
+
+#apt-get install libperl-dev
+
+for i in *.tar.gz; do
+    j="${i%%.tar.gz}";
+    [ -d $j -a $j -nt $i ] && continue;
+    rm -rf $j.bak
+    [ -e $j ] && mv -f $j $j.bak
+    echo $j
+    tar zxf $i
+    touch ${i%%.tar.gz}
+done
+
+cd $MOD_SSL
+./configure --with-apache=../$APACHE
+cd ..
+
+cd $MOD_PERL
+perl Makefile.PL \
+    PREFIX=$INSTALL_ROOT/$MOD_PERL \
+    USE_APACI=1 \
+    EVERYTHING=1 \
+    SSL_BASE=/usr/bin/openssl \
+    APACHE_PREFIX=$INSTALL_ROOT/$APACHE \
+    APACI_ARGS=--enable-module=ssl,--enable-module=rewrite \
+    PREP_HTTPD=1 \
+    DO_HTTPD=1
+make | tee make.log
+mkdir -p $INSTALL_ROOT/$MOD_PERL
+chown -R $USER.$USER $INSTALL_ROOT/$MOD_PERL
+make install
+cd ..
+ 
+cd $APACHE
+SSL_BASE=SYSTEM \
+./configure \
+    --prefix=$INSTALL_ROOT/$APACHE \
+    --enable-module=all \
+    --enable-shared=max \
+    --enable-module=ssl \
+    --activate-module=src/modules/perl/libperl.a \
+    --enable-module=perl
+make | tee make.log
+mkdir -p $INSTALL_ROOT/$APACHE
+chown -R $USER.$USER $INSTALL_ROOT/$APACHE
+#make certificate
+make install
+cd ..
+
+cd $MOD_DAV
+if ! [ -e $MOD_DAV-bkbox.patch ] && cmp $MOD_DAV-bkbox.patch ../../$MOD_DAV-bkbox.patch; then
+    patch -p1 < ../../$MOD_DAV-bkbox.patch && cp ../../$MOD_DAV-bkbox.patch .
+fi
+./configure --with-apxs=$INSTALL_ROOT/$APACHE/bin/apxs 
+make | tee make.log
+make install
+cd ..
+
+
+
+
+
+

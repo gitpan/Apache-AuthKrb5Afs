@@ -1,0 +1,48 @@
+# test/httpd.conf.in - template for Apache::AuthKrb3Afs test
+# Noel Burton-Krahn <noel@bkbox.com>
+# Dec 15, 2003
+
+User %USER%
+Group %USER%
+Listen %HTTPD_PORT%
+
+ServerRoot %PWD%
+DocumentRoot %PWD%/www
+
+ServerType standalone
+Timeout 300
+KeepAlive On
+MaxKeepAliveRequests 200
+KeepAliveTimeout 30
+MinSpareServers 5
+StartServers 5
+MaxClients 150
+MaxRequestsPerChild 0
+UseCanonicalName Off
+HostnameLookups Off
+ServerSignature Off
+
+Include httpd-modules.conf
+
+LogLevel debug
+LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" combined
+CustomLog log/access.log combined
+ErrorLog log/error.log
+PidFile log/httpd.pid
+ScoreBoardFile log/httpd.scoreboard
+TypesConfig %HTTPD_DIR%/conf/mime.types
+DirectoryIndex index.html index.cgi 
+
+Include httpd-afs.conf
+
+<Files *.pl>
+  SetHandler perl-script
+  PerlHandler Apache::Registry
+  Options +ExecCGI
+  PerlSendHeader On
+</Files>
+
+
+
+
+
