@@ -16,19 +16,22 @@ $ENV{PERL5LIB} = cwd() . "/blib/lib:$ENV{PERL5LIB}";
 
 chdir('test');
 
-system("httpd-test.init restart >/dev/null ");
-ok($?==0);
+$skip_httpd = !(-d $ENV{HTTPD_DIR} || -d "../usr/apache_1.3.29");
 
-system("wget http://127.0.0.1:8000/login -a /dev/null -O - > /dev/null");
-ok($?==0);
+$skip_httpd ? skip(1,1) : 
+    ok(system("httpd-test.init restart >/dev/null")==0);
 
-system("wget http://127.0.0.1:8000/login.pl -a /dev/null -O - > /dev/null");
-ok($?==0);
+$skip_httpd ? skip(1,1) : 
+    ok(system("wget http://127.0.0.1:8000/login -a /dev/null -O - > /dev/null")==0);
+
+$skip_httpd ? skip(1,1) : 
+    ok(system("wget http://127.0.0.1:8000/login.pl -a /dev/null -O - > /dev/null")==0);
 
 if( $ENV{INTERACTIVE} ) {
   system("tail -f log/error.log");
 }
 ok(1);
 
-system("httpd-test.init stop >/dev/null ");
-ok(1);
+$skip_httpd ? skip(1,1) : 
+    ok(system("httpd-test.init stop >/dev/null ")==0);
+

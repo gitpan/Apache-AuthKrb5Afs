@@ -31,10 +31,8 @@ else {
     }
     else {
 	print("\n",
-	      "Failed to find Apache!\n",
+	      "I couldn't find Apache!\n",
 	      "\n",
-	      "You need an apache with mod_perl and mod_dav installed.\n",
-	      "\n", 
 	      "Would you like me to build Apache for you? [Yn] "
 	      );
 	$s = <STDIN>;
@@ -58,13 +56,16 @@ else {
 	print("\n",
 	      "Failed to find Apache!\n",
 	      "\n",
-	      "You need an apache with mod_perl and mod_dav installed.\n",
+	      "I will build, but not test Apache.\n",
 	      "\n", 
-	      "Run this script again with HTTPD_DIR like\n",
+	      "Run this script again with if you'd like to test Apache\n",
 	      "\n", 
-	      "   HTTPD_DIR=/abs/path/to/apache perl $0\n",
+	      "    HTTPD_DIR=/abs/path/to/apache perl $0\n",
+	      "\n",
+	      "You can also run this script to buikld apache for you:\n",
+	      "\n",
+	      "    ./build-apache-moddav\n",
 	      "\n");
-	exit(1);
     }
     $ENV{HTTPD_DIR} = $s;
 }
@@ -73,8 +74,7 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
 	      'NAME'		=> 'Apache::AuthKrb5Afs',
 	      'VERSION_FROM'	=> 'AuthKrb5Afs.pm', # finds $VERSION
-	      'PREREQ_PM'		=> {Auth::Krb5Afs => 1.0}, # e.g., Module::Name => 1.1
-	      
+	      'PREREQ_PM'		=> {'Auth::Krb5Afs' => 1.0}, 
 	      ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
 	       (ABSTRACT_FROM => 'AuthKrb5Afs.pm', # retrieve abstract from module
 		AUTHOR     => 'Noel Burton-Krahn <noel@bkbox.com>') : ()),

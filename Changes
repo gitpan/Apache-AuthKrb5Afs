@@ -1,5 +1,9 @@
 Revision history for Perl extension Apache::AuthKrb5Afs.
 
+1.01  Thu Jan 15 23:44:45 2003
+	- fixed missing quotes in Makefile.PL 
+	  (thanks to Mike Castle <dalgoda@ix.netcom.com>)
+
 0.01  Tue Dec 16 23:44:45 2003
 	- original version; created by h2xs 1.21 with options
 		-n Apache::AuthKrb5Afs

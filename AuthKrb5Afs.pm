@@ -37,7 +37,7 @@ use Data::Dumper;
 
 require Exporter;
 our @ISA = qw(Exporter);
-our $VERSION = '1.0';
+our $VERSION = '1.01';
 
 my($COOKIE_ROOT) = "/tmp/AuthKrb5Afs";
 my($COOKIE_NAME) = "AuthKrb5Afs";
