@@ -37,7 +37,7 @@ use Data::Dumper;
 
 require Exporter;
 our @ISA = qw(Exporter);
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 my($COOKIE_ROOT) = "/tmp/AuthKrb5Afs";
 my($COOKIE_NAME) = "AuthKrb5Afs";
@@ -320,6 +320,11 @@ sub trans_handler {
 	}
 	elsif( $cookie ) {
 	    $err = $self->cookie_check($req, $cookie);
+	}
+	else {
+	    # throw away current AFS and Krb5 tokens
+	    `unlog`;
+	    $req->subprocess_env('KRB5CCNAME', '');
 	}
     }
 
